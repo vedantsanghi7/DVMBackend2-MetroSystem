@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Metro Map</h2>
+
+<form method="get" action="{% url 'metro_map_page' %}">
+    <label>Highlight ticket id (optional):</label>
+    <input type="text" name="highlight" placeholder="enter ticket UUID">
+    <button type="submit">Show</button>
+</form>
+
+<p>
+    {% if request.GET.highlight %}
+        <img src="{% url 'metro_map_image' %}?highlight={{ request.GET.highlight }}" alt="Metro Map">
+    {% else %}
+        <img src="{% url 'metro_map_image' %}" alt="Metro Map">
+    {% endif %}
+</p>
+
+{% endblock %}

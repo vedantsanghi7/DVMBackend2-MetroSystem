@@ -1,0 +1,13 @@
+Django==5.2.8
+django-allauth
+gunicorn
+networkx
+matplotlib
+python-dotenv
+certifi
+requests
+psycopg2-binary
+PyJWT>=2.8,<3
+cryptography
+
+

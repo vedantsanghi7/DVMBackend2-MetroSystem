@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Edit Profile</h2>
+
+<form method="post">
+    {% csrf_token %}
+
+    <fieldset style="margin-bottom:1rem;">
+        <legend>Account Email</legend>
+        {{ email_form.as_p }}
+        <p style="font-size:0.9rem;color:#555;">
+            We use this email to send OTPs and purchase confirmations.
+        </p>
+    </fieldset>
+
+    <fieldset style="margin-bottom:1rem;">
+        <legend>Profile Details</legend>
+        {{ profile_form.as_p }}
+    </fieldset>
+
+    <button type="submit">Save</button>
+</form>
+{% endblock %}
