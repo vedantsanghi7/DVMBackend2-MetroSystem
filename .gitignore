@@ -7,3 +7,9 @@ staticfiles/
 .env
 db.sqlite3
 *.sql
+db_dump.json
+docker-compose.yml.bak
+mysite/settings.py.*
+static_volume/
+*.bak
+*.old

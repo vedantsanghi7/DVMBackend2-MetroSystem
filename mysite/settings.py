@@ -33,7 +33,7 @@ SECRET_KEY = 'django-insecure-=)90xj0f55ulab3k-tpuo_wcpq1ac3a186&di+n9w@y%cm+t56
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [h for h in os.getenv('ALLOWED_HOSTS', '').split(',') if h] or ['127.0.0.1','localhost']
 
 
 # Application definition
@@ -64,7 +64,7 @@ AUTHENTICATION_BACKENDS = [
 
 SECRET_KEY = os.getenv('SECRET_KEY', SECRET_KEY) 
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
-ALLOWED_HOSTS = [h for h in os.getenv('ALLOWED_HOSTS', '').split(',') if h] or []
+ALLOWED_HOSTS = [h for h in os.getenv('ALLOWED_HOSTS', '').split(',') if h] or ['127.0.0.1','localhost']
 
 EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
 EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
@@ -167,7 +167,7 @@ LOGIN_REDIRECT_URL = 'metro_dashboard'
 LOGOUT_REDIRECT_URL = 'accounts_login'
 
 
-ALLOWED_HOSTS = ['localhost','127.0.0.1']
+ALLOWED_HOSTS = [h for h in os.getenv('ALLOWED_HOSTS', '').split(',') if h] or ['127.0.0.1','localhost']
 CSRF_TRUSTED_ORIGINS = ['http://localhost','http://127.0.0.1']
 ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*', 'password1*', 'password2*']
 ACCOUNT_UNIQUE_EMAIL = True
@@ -188,3 +188,5 @@ OTP_EXPIRY_MINUTES = 5
 
 
 
+# ----- added to ensure production ALLOWED_HOSTS -----
+ALLOWED_HOSTS = [h for h in os.getenv('ALLOWED_HOSTS', '').split(',') if h] or ['127.0.0.1','localhost']

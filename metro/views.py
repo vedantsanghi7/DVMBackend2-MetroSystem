@@ -200,7 +200,7 @@ def ticket_purchase_otp_view(request):
             'error': "No valid OTP found. Please start purchase again."
         })
 
-    if request.method == 'GET' or timezone.now() > otp.expires_at:
+    if timezone.now() > otp.expires_at:
         new_code = f"{random.randint(0, 999999):06d}"
         new_otp = PurchaseOTP.objects.create(
             user=request.user,
@@ -228,95 +228,121 @@ def ticket_purchase_otp_view(request):
             'info': "Your previous OTP expired. A new OTP has been sent to your email.",
         })
 
-    if request.method == 'POST':
-        form = OTPVerifyForm(request.POST)
-        if form.is_valid():
-            otp = (PurchaseOTP.objects
-                   .filter(user=request.user, purpose='TICKET_PURCHASE', is_used=False)
-                   .order_by('-created_at')
-                   .first())
-            if not otp:
-                return render(request, 'metro/ticket_buy_otp.html', {
-                    'form': OTPVerifyForm(),
-                    'error': "No valid OTP found. Please start purchase again."
-                })
+    if request.method == 'GET' and request.GET.get('resend') == '1':
+        otp.is_used = True
+        otp.save(update_fields=['is_used'])
 
-            if timezone.now() > otp.expires_at:
-                new_code = f"{random.randint(0, 999999):06d}"
-                new_otp = PurchaseOTP.objects.create(
-                    user=request.user,
-                    code=new_code,
-                    purpose='TICKET_PURCHASE',
-                    payload=otp.payload,
-                    expires_at=timezone.now() + timedelta(minutes=5),
-                )
-                send_mail(
-                    subject="Your Metro Ticket OTP",
-                    message=f"Your OTP is {new_code}. It expires in 5 minutes.",
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[request.user.email],
-                    fail_silently=False,
-                )
-                return render(request, 'metro/ticket_buy_otp.html', {
-                    'form': OTPVerifyForm(),
-                    'info': "Your OTP expired. We’ve sent a new one to your email.",
-                })
+        new_code = f"{random.randint(0, 999999):06d}"
+        new_otp = PurchaseOTP.objects.create(
+            user=request.user,
+            code=new_code,
+            purpose='TICKET_PURCHASE',
+            payload=otp.payload,
+            expires_at=timezone.now() + timedelta(minutes=5),
+        )
+        send_mail(
+            subject="Your Metro Ticket OTP",
+            message=f"Your OTP is {new_code}. It expires in 5 minutes.",
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[request.user.email],
+            fail_silently=False,
+        )
+        return render(request, 'metro/ticket_buy_otp.html', {
+            'form': OTPVerifyForm(),
+            'info': "A new OTP has been sent to your email.",
+        })
 
-            if form.cleaned_data['code'] != otp.code:
-                return render(request, 'metro/ticket_buy_otp.html', {
-                    'form': form,
-                    'error': "Invalid OTP."
-                })
+    if request.method == 'GET':
+        return render(request, 'metro/ticket_buy_otp.html', {
+            'form': OTPVerifyForm(),
+        })
 
-            otp.is_used = True
-            otp.save(update_fields=['is_used'])
+    form = OTPVerifyForm(request.POST)
+    if form.is_valid():
+        otp = (PurchaseOTP.objects
+               .filter(user=request.user, purpose='TICKET_PURCHASE', is_used=False)
+               .order_by('-created_at')
+               .first())
+        if not otp:
+            return render(request, 'metro/ticket_buy_otp.html', {
+                'form': OTPVerifyForm(),
+                'error': "No valid OTP found. Please start purchase again."
+            })
 
-            from decimal import Decimal
-            price = Decimal(otp.payload['price'])
-
-            if profile.balance < price:
-                return render(request, 'metro/ticket_buy_otp.html', {
-                    'form': form,
-                    'error': "Insufficient balance at verification time."
-                })
-
-            source = Station.objects.get(id=otp.payload['source_id'])
-            destination = Station.objects.get(id=otp.payload['destination_id'])
-            path_repr = otp.payload['path_repr']
-            lines_used_str = otp.payload['lines_used']
-
-            profile.balance -= price
-            profile.save()
-            WalletTransaction.objects.create(
-                passenger=profile,
-                amount=-price,
-                description=f'Ticket purchase {source.code}->{destination.code}'
+        if timezone.now() > otp.expires_at:
+            new_code = f"{random.randint(0, 999999):06d}"
+            new_otp = PurchaseOTP.objects.create(
+                user=request.user,
+                code=new_code,
+                purpose='TICKET_PURCHASE',
+                payload=otp.payload,
+                expires_at=timezone.now() + timedelta(minutes=5),
             )
-
-            expiry = timezone.now() + timedelta(days=1)
-            ticket = Ticket.objects.create(
-                passenger=profile,
-                source=source,
-                destination=destination,
-                price=price,
-                path_repr=path_repr,
-                lines_used=lines_used_str,
-                expires_at=expiry,
-            )
-
             send_mail(
-                subject="Metro Ticket Purchased",
-                message=f"Ticket {ticket.id} from {source.name} to {destination.name} purchased for ₹{price}.",
+                subject="Your Metro Ticket OTP",
+                message=f"Your OTP is {new_code}. It expires in 5 minutes.",
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[request.user.email],
-                fail_silently=True,
+                fail_silently=False,
             )
+            return render(request, 'metro/ticket_buy_otp.html', {
+                'form': OTPVerifyForm(),
+                'info': "Your OTP expired. We’ve sent a new one to your email.",
+            })
 
-            return redirect('metro_ticket_detail', ticket_id=ticket.id)
-    else:
-        form = OTPVerifyForm()
+        if form.cleaned_data['code'] != otp.code:
+            return render(request, 'metro/ticket_buy_otp.html', {
+                'form': form,
+                'error': "Invalid OTP."
+            })
 
-    return render(request, 'metro/ticket_buy_otp.html', {'form': form})
+        otp.is_used = True
+        otp.save(update_fields=['is_used'])
+
+        from decimal import Decimal
+        price = Decimal(otp.payload['price'])
+
+        if profile.balance < price:
+            return render(request, 'metro/ticket_buy_otp.html', {
+                'form': form,
+                'error': "Insufficient balance at verification time."
+            })
+
+        source = Station.objects.get(id=otp.payload['source_id'])
+        destination = Station.objects.get(id=otp.payload['destination_id'])
+        path_repr = otp.payload['path_repr']
+        lines_used_str = otp.payload['lines_used']
+
+        profile.balance -= price
+        profile.save()
+        WalletTransaction.objects.create(
+            passenger=profile,
+            amount=-price,
+            description=f'Ticket purchase {source.code}->{destination.code}'
+        )
+
+        expiry = timezone.now() + timedelta(days=1)
+        ticket = Ticket.objects.create(
+            passenger=profile,
+            source=source,
+            destination=destination,
+            price=price,
+            path_repr=path_repr,
+            lines_used=lines_used_str,
+            expires_at=expiry,
+        )
+
+        send_mail(
+            subject="Metro Ticket Purchased",
+            message=f"Ticket {ticket.id} from {source.name} to {destination.name} purchased for ₹{price}.",
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[request.user.email],
+            fail_silently=True,
+        )
+
+        return redirect('metro_ticket_detail', ticket_id=ticket.id)
+
+    return render(request, 'metro/ticket_buy_otp.html', {'form': OTPVerifyForm()})
 
 
 @user_passes_test(scanner_check)

@@ -6,10 +6,9 @@ services:
     depends_on:
       - db
     volumes:
-      - static_volume:/app/staticfiles
-    expose:
-      - "8000"
-
+      - ./staticfiles:/app/staticfiles
+    ports:
+      - "8000:8000"
   db:
     image: postgres:16
     environment:
@@ -25,8 +24,6 @@ services:
     build: ./nginx
     depends_on:
       - web
-    ports:
-      - "80:80"
     volumes:
       - static_volume:/static
 

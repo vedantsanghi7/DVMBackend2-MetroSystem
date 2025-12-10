@@ -9,10 +9,18 @@ def signup_view(request):
     if request.method == 'POST':
         form = UserSignupForm(request.POST)
         if form.is_valid():
-            user = form.save() 
-            
-            login(request, user)
-            return redirect('metro_dashboard')  
+            user = form.save()
+
+            # Minimal fix: authenticate to bind a backend, then login.
+            raw_password = form.cleaned_data['password1']
+            auth_user = authenticate(request, username=user.username, password=raw_password)
+            if auth_user is not None:
+                login(request, auth_user)
+            else:
+                # Fallback in case of custom auth flow; explicitly provide backend
+                login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+
+            return redirect('metro_dashboard')
     else:
         form = UserSignupForm()
 
@@ -29,7 +37,7 @@ def login_view(request):
             login(request, user)
             if user.is_staff:
                 return redirect('metro_scanner_scan')
-            return redirect('metro_dashboard')  
+            return redirect('metro_dashboard')
         else:
             error = "Invalid username or password"
             return render(request, 'accounts/login.html', {'error': error})
@@ -39,7 +47,7 @@ def login_view(request):
 
 def logout_view(request):
     logout(request)
-    return redirect('accounts_login')  
+    return redirect('accounts_login')
 
 
 @login_required
